@@ -1,0 +1,33 @@
+services:
+  api:
+    build: ./api-service
+    container_name: image-import-systemnew-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./api-service/credentials:/credentials
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/credentials/service_account.json
+
+  worker:
+    build: ./worker-service
+    container_name: image-import-systemnew-worker
+    env_file:
+      - .env
+    depends_on:
+      - api
+      - postgres
+    volumes:
+      - ./api-service/credentials:/credentials
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: images
+
+    ports:
+      - "5432:5432"
