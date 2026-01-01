@@ -11,6 +11,36 @@ An end-to-end image import platform that asynchronously imports images from Goog
 **Backend API:**
 `http://localhost:8000`
 
+## **ARCHITECTURE AND SERVICE BREAKDOWN**
+
+**1. Frontend**
+
+- Allows user to submit Google Drive folder URL
+- Displays imported images and metadata
+- Shows live status updates using polling
+
+**2. Backend API**
+
+- Accepts import requests
+- Fetches image metadata from Googlr Drive
+- Stores image records in database
+- Exposes APIs for UI and worker
+
+**3. Worker Service(Python)**
+
+- Runs asynchronously
+- picks up pending image records
+- Downloads image from Google Drive
+- Uploads images to AWS S3
+- Updates processing status and retry count
+
+**4. Database**
+
+- Store image metadata
+- Tracks processing state(`pending`, `completed`, `failed`)
+- Ensures reliability
+
+
 **Swagger API Docs:**
 `http://localhost:8000/docs`
 
@@ -183,4 +213,5 @@ Status updates are reflected in the UI using polling every few seconds
 **Author**
 
 Amit Salunkhe
+
 
