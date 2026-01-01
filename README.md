@@ -1,9 +1,20 @@
-**Image Import System**
+# **IMAGE IMPORT SYSTEM**
 
 An end-to-end image import platform that asynchronously imports images from Google Drive, uploads them to AWS S3
 ,and tracks their processing status using background worker.The system includes a live-updating UI to monitor imports progress.
 
-**Features:**
+## **WORKING SITES URL(Local):**
+
+**Frontend (UI):**
+`http://localhost:5173`
+
+**Backend API:**
+`http://localhost:8000`
+
+**Swagger API Docs:**
+`http://localhost:8000/docs`
+
+## **FEATURES:**
 1. Import images from a Google Drive folder using Service Account.
 2. Asynchronous background processing using a worker service.
 3. Upload images to AWS S3.
@@ -13,7 +24,7 @@ An end-to-end image import platform that asynchronously imports images from Goog
 7. Fully Dockerized (API,  Worker, database)
 8. Secure handling of credentials using enviroment variables.
 
-**Architecture Overview:**
+## **ARCHITECTURE OVERVIEW:**
 
 `React Frontend → FastAPI Backend → PostgreSQL ← Worker Service → Google Drive → AWS S3`
 - **Frontend:** React(Vite)
@@ -24,7 +35,7 @@ An end-to-end image import platform that asynchronously imports images from Goog
 - **External Source:** Google Drive API
 - **Containerization:** Docker & Docker compose
 
-**Enviroment Variables**
+## **ENVIROMENT VARIABLES**
 
 All sensitive data is managed via enviroment variables.
 Create a .env file locally (do not commit it):
@@ -35,14 +46,14 @@ Create a .env file locally (do not commit it):
 - AWS_S3_BUCKET=imagr-import-platform
 - GOOGLE_APPLICATION_CREDENTIALS=path/to/service_account.json
 
-**Important**
+### **IMPORTANT**
 
 .env and Google service account JSON files are intentionally excluded from the repository for security 
 reason.
 
 Refer to .env.example for required variables.
 
-**HOW TO RUN THE PROJECT-->**
+## **SET UP INSTRUCTION(Local)-->**
 
 **1. Prerequisites:**
 - Docker 
@@ -71,7 +82,64 @@ Frontend will be avaliable at:
 
 `http://localhost:5173`
 
-**HOW IMAGE IMPORT WORKS**
+## **SET UP INSTRUCTION (Cloud)-->**
+
+The application can be deployed to cloud using the same Docker images:
+- Deploy API & worker containers using:
+
+    AWS ECS/EKS
+  
+    GCP Cloud Run/GKE
+
+- Use managed PostgreSQL (RDS/ Cloud SQL)
+- Use AWS S3 for image storage
+- Store secrete using:
+
+    AWS Secrets Manager
+
+    GCP Secret Manager
+
+ ## **API DOCUMENTATION**
+
+  **1. Import Images from Google Drive**
+
+  -   Endpoint
+
+      `POST /import/google-drive`
+
+  -  Request Body
+    
+      `{
+          "folder_url":"https://drive.google.com/folders/xxxxx"
+        }`
+
+  -  Response
+
+      `{
+      "imported": 4,
+        "skipped": 1
+      }`
+
+**2. List Imported Images**
+
+  -  Endpoint
+
+      `GET /images`
+
+  -  Response
+
+      `[
+       {
+         "id": 1,
+         "name": "image1.jpg",
+         "size": 102562,
+         "mime_type": "image/jpg",
+         "status": "completed",
+         "retry_count": 0
+       }
+     ]`
+
+## **HOW IMAGE IMPORT WORKS**
 
 1. User pastes a Google Drive Folder URL in the UI
 2. Backend fetches image metadata and stores it with `pending`status.
@@ -81,7 +149,25 @@ Frontend will be avaliable at:
 6. Status is updated to `Completed` or `Failed`.
 7. UI auto-refreshes to show latest status.
 
-**Status Handling**
+## **SCALABILITY AND LARGE SCALE IMPORTS**
+
+- Worker runs asynchonously to avoid blocking API
+- Multiple worker instances can run in parallel
+- Database ensures reliable job tracking
+- Retry mechanism handles transient failures
+- S3 supports large-scale storage
+- Polling based UI avoids complex real time infrastructure
+- architecture suppports horizontal scaling
+
+## **DOCKERFILES**
+
+`frontend/Dockerfile`
+
+`api-service/Dockerfile`
+
+`worker-service/Dockerfile`
+
+### **STATUS HANDLING**
 
 - pending - waiting to be processed
 - completed - successfully uploaded to S3
@@ -89,7 +175,7 @@ Frontend will be avaliable at:
 
 Status updates are reflected in the UI using polling every few seconds
 
-**Notes**
+### **Notes**
 
 - Polling is used for simplicity and reliability.
 - The system is designed to be easily extendable.
@@ -97,3 +183,4 @@ Status updates are reflected in the UI using polling every few seconds
 **Author**
 
 Amit Salunkhe
+
