@@ -3,4 +3,4 @@ node_modules/
 __pycache__/
 dist/
 .vite/
-api=service/credentials/service_account.json
+api-service/credentials/service_account.json/
