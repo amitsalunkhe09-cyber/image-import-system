@@ -1,39 +1,19 @@
-import { useEffect, useState } from "react";
-import { fetchImages } from "../services/api";
+import { useState } from "react";
+import { fetchImages, importImages } from "../services/api";
 import "./ImagesPage.css";
 
 function ImagesPage() {
-  const [images, setImages] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [sessionImages, setSessionImages] = useState([]);
+  const [allImages, setAllImages] = useState([]);
+  const [showAll, setShowAll] = useState(false);
+
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const [folderUrl, setFolderUrl] = useState("");
   const [importStatus, setImportStatus] = useState(null);
   const [importing, setImporting] = useState(false);
-
-  // Fetch images (used by polling)
-  const loadImages = async () => {
-    try {
-      const data = await fetchImages();
-      setImages(data);
-      setLoading(false);
-    } catch (err) {
-      setError(err.message || "Failed to load images");
-      setLoading(false);
-    }
-  };
-
-  // Initial load + polling
-  useEffect(() => {
-    loadImages();
-
-    const interval = setInterval(() => {
-      loadImages();
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, []);
-
+  const [hasImported, setHasImported] = useState(false);
 
   const handleImport = async () => {
     if (!folderUrl.trim()) {
@@ -42,37 +22,39 @@ function ImagesPage() {
     }
 
     setImporting(true);
-    setImportStatus("Importing images...");
     setError(null);
+    setImportStatus("Importing images...");
+    setSessionImages([]);
+    setShowAll(false);
 
     try {
-      const response = await fetch("http://localhost:8000/import/google-drive", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ folder_url: folderUrl }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || "Import failed");
-      }
+      const result = await importImages(folderUrl);
 
       setImportStatus(
-        `Imported: ${data.imported} | Skipped: ${data.skipped}`
+        `Imported: ${result.imported}, Skipped: ${result.skipped}`
       );
 
-      loadImages();
+      setHasImported(true);
+
+      const images = await fetchImages();
+      setAllImages(images);
+
+      if (result.imported > 0) {
+        setSessionImages(images.slice(0, result.imported));
+      } else {
+        setSessionImages([]);
+      }
+
       setFolderUrl("");
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Import failed");
       setImportStatus(null);
     } finally {
       setImporting(false);
     }
   };
+
+  const displayedImages = showAll ? allImages : sessionImages;
 
   return (
     <div className="container">
@@ -86,38 +68,67 @@ function ImagesPage() {
           value={folderUrl}
           onChange={(e) => setFolderUrl(e.target.value)}
         />
-
         <button onClick={handleImport} disabled={importing}>
           {importing ? "Importing..." : "Import Images"}
         </button>
       </div>
 
-      {importStatus && <div className="success">{importStatus}</div>}
+      {importStatus && (
+        <div className="success">
+          {importStatus}
+          {importStatus.includes("Skipped") && (
+            <div className="info">
+              Skipped images already exist in the system (duplicate files).
+            </div>
+          )}
+        </div>
+      )}
+
       {error && <div className="error">Error: {error}</div>}
 
-      {/* Images Table */}
-      {loading ? (
+      {/* Toggle Button */}
+      {hasImported && allImages.length > 0 && (
+        <button
+          className="toggle-btn"
+          onClick={() => setShowAll(!showAll)}
+        >
+          {showAll ? "View Current Import" : "View All Imports"}
+        </button>
+      )}
+
+      {/* Image Table */}
+      {!hasImported ? (
+        <p className="placeholder">
+          Paste a Google Drive folder link and click <b>Import Images</b>.
+        </p>
+      ) : loading ? (
         <p className="placeholder">Loading images...</p>
-      ) : images.length === 0 ? (
-        <p className="placeholder">No images imported yet.</p>
+      ) : displayedImages.length === 0 ? (
+        <p className="placeholder">
+          No new images were imported in this run.
+        </p>
       ) : (
         <table>
           <thead>
             <tr>
               <th>ID</th>
               <th>Name</th>
-              <th>Size (MlB)</th>
+              <th>Size (MB)</th>
               <th>Type</th>
               <th>Status</th>
               <th>Retries</th>
             </tr>
           </thead>
           <tbody>
-            {images.map((img) => (
+            {displayedImages.map((img) => (
               <tr key={img.id}>
                 <td>{img.id}</td>
                 <td>{img.name}</td>
-                <td>{img.size ? (img.size /(1024 * 1024)).toFixed(2) + "MB" : "-"}</td>
+                <td>
+                  {img.size
+                    ? (img.size / (1024 * 1024)).toFixed(2)
+                    : "-"}
+                </td>
                 <td>{img.mime_type || "-"}</td>
                 <td>
                   <span className={`status ${img.status}`}>
