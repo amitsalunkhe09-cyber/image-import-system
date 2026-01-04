@@ -1,16 +1,19 @@
 import { useState } from "react";
 import { fetchImages, importImages } from "../services/api";
-import { getUserId } from "../lib/user";
 import "./ImagesPage.css";
 
 function ImagesPage() {
-  const [images, setImages] = useState([]);
+  const [sessionImages, setSessionImages] = useState([]);
+  const [allImages, setAllImages] = useState([]);
+  const [showAll, setShowAll] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const [folderUrl, setFolderUrl] = useState("");
   const [importStatus, setImportStatus] = useState(null);
   const [importing, setImporting] = useState(false);
+  const [hasImported, setHasImported] = useState(false);
 
   const handleImport = async () => {
     if (!folderUrl.trim()) {
@@ -18,33 +21,40 @@ function ImagesPage() {
       return;
     }
 
-    const userId = getUserId();
     setImporting(true);
     setError(null);
     setImportStatus("Importing images...");
-    setImages([]);
+    setSessionImages([]);
+    setShowAll(false);
 
     try {
-      const result = await importImages(folderUrl, userId);
+      const result = await importImages(folderUrl);
 
       setImportStatus(
         `Imported: ${result.imported}, Skipped: ${result.skipped}`
       );
 
-      setLoading(true);
-      const data = await fetchImages();
-      setImages(data);
-      setLoading(false);
+      setHasImported(true);
+
+      const images = await fetchImages();
+      setAllImages(images);
+
+      if (result.imported > 0) {
+        setSessionImages(images.slice(0, result.imported));
+      } else {
+        setSessionImages([]);
+      }
 
       setFolderUrl("");
     } catch (err) {
       setError(err.message || "Import failed");
       setImportStatus(null);
-      setLoading(false);
     } finally {
       setImporting(false);
     }
   };
+
+  const displayedImages = showAll ? allImages : sessionImages;
 
   return (
     <div className="container">
@@ -63,23 +73,39 @@ function ImagesPage() {
         </button>
       </div>
 
-      {/* Import Status */}
-      {importStatus && <div className="success">{importStatus}</div>}
-
-      {importStatus && importStatus.includes("Skipped") && (
-        <div className="info">
-          Some images were skipped because they already exist in the system.
+      {importStatus && (
+        <div className="success">
+          {importStatus}
+          {importStatus.includes("Skipped") && (
+            <div className="info">
+              Skipped images already exist in the system (duplicate files).
+            </div>
+          )}
         </div>
       )}
 
       {error && <div className="error">Error: {error}</div>}
 
-      {/* Images Table */}
-      {loading ? (
-        <p className="placeholder">Loading images...</p>
-      ) : images.length === 0 ? (
+      {/* Toggle Button */}
+      {hasImported && allImages.length > 0 && (
+        <button
+          className="toggle-btn"
+          onClick={() => setShowAll(!showAll)}
+        >
+          {showAll ? "View Current Import" : "View All Imports"}
+        </button>
+      )}
+
+      {/* Image Table */}
+      {!hasImported ? (
         <p className="placeholder">
           Paste a Google Drive folder link and click <b>Import Images</b>.
+        </p>
+      ) : loading ? (
+        <p className="placeholder">Loading images...</p>
+      ) : displayedImages.length === 0 ? (
+        <p className="placeholder">
+          No new images were imported in this run.
         </p>
       ) : (
         <table>
@@ -90,10 +116,11 @@ function ImagesPage() {
               <th>Size (MB)</th>
               <th>Type</th>
               <th>Status</th>
+              <th>Retries</th>
             </tr>
           </thead>
           <tbody>
-            {images.map((img) => (
+            {displayedImages.map((img) => (
               <tr key={img.id}>
                 <td>{img.id}</td>
                 <td>{img.name}</td>
@@ -103,7 +130,12 @@ function ImagesPage() {
                     : "-"}
                 </td>
                 <td>{img.mime_type || "-"}</td>
-                <td>{img.status}</td>
+                <td>
+                  <span className={`status ${img.status}`}>
+                    {img.status}
+                  </span>
+                </td>
+                <td>{img.retry_count}</td>
               </tr>
             ))}
           </tbody>

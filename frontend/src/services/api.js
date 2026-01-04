@@ -1,13 +1,12 @@
 import { supabase } from "../lib/supabase";
-import { getUserId } from "../lib/user";
 
+/**
+ * Fetch all images from Supabase
+ */
 export async function fetchImages() {
-  const userId = getUserId();
-
   const { data, error } = await supabase
     .from("images")
     .select("*")
-    .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -17,7 +16,10 @@ export async function fetchImages() {
   return data;
 }
 
-export async function importImages(folderUrl, userId) {
+/**
+ * Import images using Supabase Edge Function
+ */
+export async function importImages(folderUrl) {
   const response = await fetch(
     import.meta.env.VITE_IMPORT_API_URL,
     {
@@ -28,15 +30,17 @@ export async function importImages(folderUrl, userId) {
       },
       body: JSON.stringify({
         folder_url: folderUrl,
-        user_id: userId,
       }),
     }
   );
 
+  const data = await response.json();
+
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || "Import failed");
+    throw new Error(
+      `Import failed (${response.status}): ${JSON.stringify(data)}`
+    );
   }
 
-  return response.json();
+  return data;
 }
