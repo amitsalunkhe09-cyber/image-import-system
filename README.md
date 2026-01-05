@@ -6,10 +6,10 @@ An end-to-end image import platform that asynchronously imports images from Goog
 ## **WORKING SITES URL(Local):**
 
 **Frontend (UI):**
-`http://localhost:5173`
+`(https://image-import-system-virid.vercel.app/)`
 
 **Backend API:**
-`http://localhost:8000`
+`(https://gwxquybueoytkyzkbhuh.supabase.co/)`
 
 ## **ARCHITECTURE AND SERVICE BREAKDOWN**
 
@@ -90,7 +90,7 @@ Refer to .env.example for required variables.
 - Docker Compose
 - Node.js (For frontend development)
 
-**2. Start Backend & Worker:**
+**2. Start Backend & Worker(local):**
 
 From project root:
 `docker-compose up --build`
@@ -99,6 +99,19 @@ This will start:
 - API service
 - Worker service
 - PostgreSQL database
+
+**For Deployment:**
+
+- Deploy Supabase edge function
+- Set variables enviroment variables:
+
+   `SUPABASE_URL`
+
+   `SUPABASE_SERVICE_ROLE_KEY`
+
+   `GOOGLE_SERVICE_ACCOUNT_JSON`
+
+  
 
 **Start Frontend:**
 
@@ -182,12 +195,13 @@ The application can be deployed to cloud using the same Docker images:
 ## **SCALABILITY AND LARGE SCALE IMPORTS**
 
 - Worker runs asynchonously to avoid blocking API
+- Backend is stateless (serverless)
 - Multiple worker instances can run in parallel
-- Database ensures reliable job tracking
+- Can handle large folders due to incremental processing
 - Retry mechanism handles transient failures
 - S3 supports large-scale storage
 - Polling based UI avoids complex real time infrastructure
-- architecture suppports horizontal scaling
+- Duplicates handling avoids unnecessary DB reads
 
 ## **DOCKERFILES**
 
@@ -213,5 +227,6 @@ Status updates are reflected in the UI using polling every few seconds
 **Author**
 
 Amit Salunkhe
+
 
 
